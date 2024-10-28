@@ -42,8 +42,8 @@ void read_sstable_info(const string &filename, vector<int> &level, vector<int> &
 }
 int main(void)
 {
-    vector<int> level;
-    vector<int> key;
+    vector<int> level;    //0-479
+    vector<int> key;      //0-479
     // read_sstable_info("sstable_info_0.1", level, key); //load info.
 
     return 0;
