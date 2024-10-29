@@ -40,11 +40,26 @@ void read_sstable_info(const string &filename, vector<int> &level, vector<int> &
 
     infile.close();
 }
+void extract_four_sstable(vector<int> &level, vector<int> &key, int index, vector<int> &allocat_level, vector<int> &allocat_key) // extract four sstable
+{
+    int i = 0;
+    for (i = 0; i < 4; i++)
+    {
+        allocat_level[i] = level[index];
+        allocat_key[i] = key[index];
+        index = index + 1;
+    }
+}
 int main(void)
 {
-    vector<int> level;    //index 0-479
-    vector<int> key;      //index 0-479
+    vector<int> level;            // index 0-479
+    vector<int> key;              // index 0-479
+    vector<int> allocat_level(4); // 提取4個level
+    vector<int> allocat_key(4);   // 提取4個key
     // read_sstable_info("sstable_info_0.1", level, key); //load info.
+    int i = 0; // extract four sstable index
+    /*for (i = 0; i < 480; i += 4)  //extract four sstable
+        extract_four_sstable(level, key, i, allocat_level, allocat_key);*/
 
     return 0;
 }
