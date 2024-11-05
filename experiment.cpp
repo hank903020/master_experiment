@@ -52,8 +52,8 @@ void extract_four_sstable(vector<int> &level, vector<int> &key, int index, vecto
 }
 int main(void)
 {
-    vector<int> level;            // index 0-479
-    vector<int> key;              // index 0-479
+    vector<int> level(480);            // index 0-479
+    vector<int> key(480);              // index 0-479
     vector<int> allocat_level(4); // 提取4個level
     vector<int> allocat_key(4);   // 提取4個key
     // read_sstable_info("sstable_info_0.1", level, key); //load info.
