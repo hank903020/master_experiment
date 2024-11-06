@@ -3,19 +3,23 @@
 #include <vector>
 #include <string>
 #include <sstream>
+
 using namespace std;
 const int KB_TO_MB = 1024;
-const int BOTTOM_TRACKS = 10240;                                                     // bottom tracks 20GB
-const int TOP_TRACKS = 10240;                                                        // top tracks 20GB
-void read_sstable_info(const string &filename, vector<int> &level, vector<int> &key) // load sstable info. to matrix
+const int BOTTOM_TRACKS = 10241; // bottom tracks 20GB, 下比上多一比較好計算
+const int TOP_TRACKS = 10240;    // top tracks 20GB
+const int INDEX = 320;           // 10240/32=320, 用於簡化紀錄在track上的level,key
+// 函式: 讀取檔案並將資料分別儲存到兩個陣列中
+void readSSTableFile(const string &filename, vector<int> &level, vector<int> &key)
 {
     ifstream infile(filename);
 
     if (!infile.is_open())
     {
-        cerr << "no file" << endl;
+        cerr << "無法開啟檔案" << endl;
         return;
     }
+
     string line;
     while (getline(infile, line))
     {
@@ -40,7 +44,7 @@ void read_sstable_info(const string &filename, vector<int> &level, vector<int> &
 
     infile.close();
 }
-void extract_four_sstable(vector<int> &level, vector<int> &key, int index, vector<int> &allocat_level, vector<int> &allocat_key) // extract four sstable
+void extract_four_sstable(vector<int> &level, vector<int> &key, int index, vector<int> &allocat_level, vector<int> &allocat_key)
 {
     int i = 0;
     for (i = 0; i < 4; i++)
@@ -50,16 +54,66 @@ void extract_four_sstable(vector<int> &level, vector<int> &key, int index, vecto
         index = index + 1;
     }
 }
-int main(void)
+int judge_level(int &level)
 {
-    vector<int> level;            // index 0-479
-    vector<int> key;              // index 0-479
-    vector<int> allocat_level(4); // 提取4個level
-    vector<int> allocat_key(4);   // 提取4個key
-    // read_sstable_info("sstable_info_0.1", level, key); //load info.
-    int i = 0; // extract four sstable index
-    /*for (i = 0; i < 480; i += 4)  //extract four sstable
-        extract_four_sstable(level, key, i, allocat_level, allocat_key);*/
+    if (level == 4)
+        return 4;
+    else
+        return 0;
+}
+void allocate_SStable(vector<int> &allocat_level, vector<int> &allocat_key, vector<int> &top_tracks, vector<int> &bottom_tracks, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key)
+{
+    int i = 0, level = 0, top_space = 0;
+    for (i = 0; i < 4; i++) // 4張sstable
+    {
+        // judge level
+        level = judge_level(allocat_level[i]); // 1 = level4
+        // judge top tracks spaces
+        if (top_tracks[10239] == 0)
+        {
+            top_space = 1; // 1=have space, 0=no space
+        }
+        else
+        {
+            top_space = 0;
+        }
+
+        if (level == 4 && top_space == 1)
+        {
+            // write to top
+            // cout << "4" << endl;
+        }
+        else
+        {
+            // write to bottom
+            // cout << "except 4" << endl;
+        }
+    }
+};
+int main()
+{
+    vector<int> level;
+    vector<int> key;
+    vector<int> allocat_level(4);             // 提取4個level
+    vector<int> allocat_key(4);               // 提取4個key
+    vector<int> top_tracks(TOP_TRACKS);       // 紀錄top track被使用情形
+    vector<int> bottom_tracks(BOTTOM_TRACKS); // 紀錄bottom track被使用情形
+    // track上存的level
+    vector<int> top_sstable_level(INDEX);
+    vector<int> bottom_sstable_level(INDEX);
+    // track上存的key
+    vector<int> top_sstable_key(INDEX);
+    vector<int> bottom_sstable_key(INDEX);
+
+    int i = 0;
+    // 呼叫函式讀取檔案，並將結果存入 level 和 key 陣列中
+    readSSTableFile("sstable_info_0.1.txt", level, key);
+
+    for (i = 0; i < 480; i += 4)
+    {
+        extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
+        allocate_SStable(allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
+    }
 
     return 0;
 }
