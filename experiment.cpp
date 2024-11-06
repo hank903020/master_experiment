@@ -80,11 +80,13 @@ void allocate_SStable(vector<int> &allocat_level, vector<int> &allocat_key, vect
 
         if (level == 4 && top_space == 1)
         {
+            // judge key
             // write to top
             // cout << "4" << endl;
         }
         else
         {
+            // judge key
             // write to bottom
             // cout << "except 4" << endl;
         }
