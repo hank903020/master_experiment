@@ -91,7 +91,7 @@ void allocate_SStable(vector<int> &allocat_level, vector<int> &allocat_key, vect
             // cout << "except 4" << endl;
         }
     }
-};
+}
 int main()
 {
     vector<int> level;
