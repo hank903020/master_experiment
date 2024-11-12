@@ -9,7 +9,7 @@ const int KB_TO_MB = 1024;
 const int BOTTOM_TRACKS = 10241; // bottom tracks 20GB, 下比上多一比較好計算
 const int TOP_TRACKS = 10240;    // top tracks 20GB
 const int INDEX = 320;           // 10240/32=320, 用於簡化紀錄在track上的level,key
-// 函式: 讀取檔案並將資料分別儲存到兩個陣列中
+// 讀取檔案並將資料分別儲存到兩個陣列中
 void readSSTableFile(const string &filename, vector<int> &level, vector<int> &key)
 {
     ifstream infile(filename);
@@ -54,41 +54,76 @@ void extract_four_sstable(vector<int> &level, vector<int> &key, int index, vecto
         index = index + 1;
     }
 }
-int judge_level(int &level)
+bool judge_level(int &level)
 {
     if (level == 4)
-        return 4;
+        return 1;
     else
         return 0;
 }
+// 判斷level and key，先判斷key的存在，在判斷是否存在同個level，考慮覆寫情況
+int judge_overwrite(int &level, int &key, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key)
+{
+    int i = 0, level_flag = 0;
+    // judge level
+    if (level == 4)
+        level_flag = 4;
+    else if (level == 3)
+        level_flag = 3;
+    else
+        level_flag = 2;
+    // judge key(top)
+    for (i = 0; i < INDEX; i++)
+    {
+        if (key == top_sstable_key[i]) // 先判斷是否有一樣的key
+        {
+            if (level == top_sstable_level[i]) // 在判斷是否有一樣的level
+                return 1;                      // 1 代表存在在top上
+        }
+    }
+    // judge key(bottom)
+    for (i = 319; i < 0; i--)
+    {
+        if (key == bottom_sstable_key[i]) // 先判斷是否有一樣的key
+        {
+            if (level == bottom_sstable_level[i]) // 在判斷是否有一樣的level
+                return 2;                         // 2 代表存在在bottom上
+        }
+    }
+    return 0; // 不存在
+}
 void allocate_SStable(vector<int> &allocat_level, vector<int> &allocat_key, vector<int> &top_tracks, vector<int> &bottom_tracks, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key)
 {
-    int i = 0, level = 0, top_space = 0;
+    int i = 0, overwrite = 0, top_space = 0, level = 0;
     for (i = 0; i < 4; i++) // 4張sstable
     {
-        // judge level
-        level = judge_level(allocat_level[i]); // 1 = level4
         // judge top tracks spaces
         if (top_tracks[10239] == 0)
-        {
             top_space = 1; // 1=have space, 0=no space
-        }
         else
-        {
             top_space = 0;
-        }
 
-        if (level == 4 && top_space == 1)
+        // judge 是否覆寫
+        overwrite = judge_overwrite(allocat_level[i], allocat_key[i], top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
+        if (overwrite == 1) // overwrite on top
         {
-            // judge key
-            // write to top
-            // cout << "4" << endl;
         }
-        else
+        else if (overwrite == 2) // overwrite on bottom
         {
-            // judge key
-            // write to bottom
-            // cout << "except 4" << endl;
+        }
+        else // write on new tracks
+        {
+            level = judge_level(allocat_level[i]);
+            if (level == 1 && top_space == 1) // level 4 && top have space
+            {
+                // write top
+                cout << "4" << endl;
+            }
+            else
+            {
+                // write bottom
+                cout << "except 4" << endl;
+            }
         }
     }
 }
