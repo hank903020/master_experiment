@@ -62,7 +62,7 @@ bool judge_level(int &level)
         return 0;
 }
 // 判斷level and key，先判斷key的存在，在判斷是否存在同個level，考慮覆寫情況
-int judge_overwrite(int &level, int &key, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key)
+int judge_overwrite(int &level, int &key, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key, int &index_position)
 {
     int i = 0, level_flag = 0;
     // judge level
@@ -78,7 +78,10 @@ int judge_overwrite(int &level, int &key, vector<int> &top_sstable_level, vector
         if (key == top_sstable_key[i]) // 先判斷是否有一樣的key
         {
             if (level == top_sstable_level[i]) // 在判斷是否有一樣的level
-                return 1;                      // 1 代表存在在top上
+            {
+                index_position = i;
+                return 1; // 1 代表存在在top上
+            }
         }
     }
     // judge key(bottom)
@@ -87,14 +90,18 @@ int judge_overwrite(int &level, int &key, vector<int> &top_sstable_level, vector
         if (key == bottom_sstable_key[i]) // 先判斷是否有一樣的key
         {
             if (level == bottom_sstable_level[i]) // 在判斷是否有一樣的level
-                return 2;                         // 2 代表存在在bottom上
+            {
+                index_position = i;
+                return 2; // 2 代表存在在bottom上
+            }
         }
     }
     return 0; // 不存在
 }
 void allocate_SStable(vector<int> &allocat_level, vector<int> &allocat_key, vector<int> &top_tracks, vector<int> &bottom_tracks, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key)
 {
-    int i = 0, overwrite = 0, top_space = 0, level = 0;
+    int i = 0, overwrite = 0, top_space = 0, level = 0,
+        index_position = 0; // 定位index
     for (i = 0; i < 4; i++) // 4張sstable
     {
         // judge top tracks spaces
@@ -104,12 +111,14 @@ void allocate_SStable(vector<int> &allocat_level, vector<int> &allocat_key, vect
             top_space = 0;
 
         // judge 是否覆寫
-        overwrite = judge_overwrite(allocat_level[i], allocat_key[i], top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
+        overwrite = judge_overwrite(allocat_level[i], allocat_key[i], top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key, index_position);
         if (overwrite == 1) // overwrite on top
         {
+            // position top index
         }
         else if (overwrite == 2) // overwrite on bottom
         {
+            // position top index
         }
         else // write on new tracks
         {
@@ -127,7 +136,7 @@ void allocate_SStable(vector<int> &allocat_level, vector<int> &allocat_key, vect
         }
     }
 }
-int main()
+int main(void)
 {
     vector<int> level;
     vector<int> key;
@@ -151,6 +160,4 @@ int main()
         extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
         allocate_SStable(allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
     }
-
-    return 0;
 }
