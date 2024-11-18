@@ -64,14 +64,8 @@ bool judge_level(int &level)
 // 判斷level and key，先判斷key的存在，在判斷是否存在同個level，考慮覆寫情況
 int judge_overwrite(int &level, int &key, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key, int &index_position)
 {
-    int i = 0, level_flag = 0;
-    // judge level
-    if (level == 4)
-        level_flag = 4;
-    else if (level == 3)
-        level_flag = 3;
-    else
-        level_flag = 2;
+    int i = 0;
+   
     // judge key(top)
     for (i = 0; i < INDEX; i++)
     {
