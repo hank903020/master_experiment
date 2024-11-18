@@ -118,7 +118,7 @@ void allocate_SStable(vector<int> &allocat_level, vector<int> &allocat_key, vect
         }
         else if (overwrite == 2) // overwrite on bottom
         {
-            // position top index
+            // position bottom index
         }
         else // write on new tracks
         {
