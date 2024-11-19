@@ -95,7 +95,7 @@ int judge_overwrite(int &level, int &key, vector<int> &top_sstable_level, vector
 void allocate_SStable(vector<int> &allocat_level, vector<int> &allocat_key, vector<int> &top_tracks, vector<int> &bottom_tracks, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key)
 {
     int i = 0, overwrite = 0, top_space = 0, level = 0,
-        index_position = 0; // 定位index
+        index_position = 0; // 定位key, sstable index
     for (i = 0; i < 4; i++) // 4張sstable
     {
         // judge top tracks spaces
