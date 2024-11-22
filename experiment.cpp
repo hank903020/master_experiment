@@ -145,7 +145,7 @@ void allocate_SStable(int &track_sector, vector<int> &allocat_level, vector<int>
         else if (overwrite == 2) // overwrite on bottom
         {
             // position bottom index
-            sstable_position = (index_position * 32); // 還原sstable track位置，為sstable終點
+            sstable_position = (index_position * 32); // 還原sstable track位置，為sstable起點
             // judge RMW and caculate track distance and write latency
         }
         else // write on new tracks
