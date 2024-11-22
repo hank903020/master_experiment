@@ -139,12 +139,14 @@ void allocate_SStable(int &track_sector, vector<int> &allocat_level, vector<int>
         if (overwrite == 1) // overwrite on top
         {
             // position top index
-            sstable_position = ((index_position + 1) * 32) - 1; // 還原sstable track位置，為sstable終點
+            sstable_position = (index_position * 32); // 還原sstable track位置，為sstable起點
             // caculate track distance and write latency
         }
         else if (overwrite == 2) // overwrite on bottom
         {
             // position bottom index
+            sstable_position = (index_position * 32); // 還原sstable track位置，為sstable終點
+            // judge RMW and caculate track distance and write latency
         }
         else // write on new tracks
         {
@@ -152,12 +154,10 @@ void allocate_SStable(int &track_sector, vector<int> &allocat_level, vector<int>
             if (level == 1 && top_space == 1) // level 4 && top have space
             {
                 // write top
-                cout << "4" << endl;
             }
             else
             {
                 // write bottom
-                cout << "except 4" << endl;
             }
         }
     }
