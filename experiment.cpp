@@ -16,7 +16,7 @@ const double t_rotation = 10.0;  // 旋轉時間，單位：毫秒，假設為60
 // 計算尋道時間，t_seek, a = 0.125779
 double calculateSeekTime(int track_src, int track_des)
 {
-    return 0.125779 * sqrt(abs(track_src - track_des)) + t_seek_min;
+    return 0.125779 * sqrt(2 * (abs(track_src - track_des))) + t_seek_min;
 }
 
 // 計算I/O延遲
@@ -80,6 +80,25 @@ void extract_four_sstable(vector<int> &level, vector<int> &key, int index, vecto
     }
 }
 
+// wirte top
+void Write_top(vector<int> &top_tracks, int top_flag)
+{
+    int i;
+    for (i = 0; i < 32; i++)
+    {
+        top_tracks[top_flag] = 1;
+        top_flag = top_flag + 1;
+    }
+}
+
+// record top sstable level and key
+void Record_top_sstable(vector<int> &top_sstable_level, vector<int> &top_sstable_key, int &level, int &key, int flag)
+{
+    int index = flag / 32;
+    top_sstable_level[index] = level;
+    top_sstable_key[index] = key;
+}
+
 bool judge_level(int &level)
 {
     if (level == 4)
@@ -120,7 +139,7 @@ int judge_overwrite(int &level, int &key, vector<int> &top_sstable_level, vector
     return 0; // 不存在
 }
 
-void allocate_SStable(int &track_sector, vector<int> &allocat_level, vector<int> &allocat_key, vector<int> &top_tracks, vector<int> &bottom_tracks, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key)
+void allocate_SStable(int &track_sector, int &top_flag, int &bottom_flag, vector<int> &allocat_level, vector<int> &allocat_key, vector<int> &top_tracks, vector<int> &bottom_tracks, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key)
 {
     int i = 0, overwrite = 0, top_space = 0, level = 0,
         index_position = 0;   // 定位index
@@ -141,25 +160,42 @@ void allocate_SStable(int &track_sector, vector<int> &allocat_level, vector<int>
             // position top index
             sstable_position = (index_position * 32); // 還原sstable track位置，為sstable起點
             // caculate track distance and write latency
+            // 紀錄sector移動到哪裡
+            track_sector = sstable_position;
+            track_sector = track_sector + 31;
         }
         else if (overwrite == 2) // overwrite on bottom
         {
             // position bottom index
-            sstable_position = (index_position * 32); // 還原sstable track位置，為sstable起點
-            // judge RMW and caculate track distance and write latency
+            sstable_position = (index_position * 32); // 還原sstable track位置，為sstable終點
+            // judge RMW
+            // caculate track distance and write latency
+            // 紀錄sector移動到哪裡
+            track_sector = sstable_position;
         }
         else // write on new tracks
         {
             level = judge_level(allocat_level[i]);
             if (level == 1 && top_space == 1) // level 4 && top have space
             {
-                // caculate track distance and write top
+                // write top
+                Write_top(top_tracks, top_flag);
                 // 紀錄sstable level and key
+                Record_top_sstable(top_sstable_level, top_sstable_key, allocat_level[i], allocat_key[i], top_flag);
                 // caculate write latency
+                // 紀錄sector移動到哪裡
+                if (top_flag == 0)
+                    track_sector = track_sector + 31;
+                else
+                    track_sector = track_sector + 32;
+                // 最後定位top track目前存到哪裡
+                top_flag = top_flag + 32;
             }
             else
             {
                 // write bottom
+                // judge RMW
+                // caculate track distance and write latency
             }
         }
     }
@@ -178,7 +214,8 @@ int main(void)
     // track上存的key
     vector<int> top_sstable_key(INDEX);
     vector<int> bottom_sstable_key(INDEX);
-    int track_sector = 0; // sector position
+    int track_sector = 0;                  // sector position
+    int top_flag = 0, bottom_flag = 10240; // record top and bottom track store where
     double latency = 0;
 
     int i = 0;
@@ -188,6 +225,6 @@ int main(void)
     for (i = 0; i < 480; i += 4)
     {
         extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
-        allocate_SStable(track_sector, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
+        allocate_SStable(track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
     }
 }
