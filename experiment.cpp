@@ -153,7 +153,7 @@ void allocate_SStable(int &track_sector, vector<int> &allocat_level, vector<int>
             level = judge_level(allocat_level[i]);
             if (level == 1 && top_space == 1) // level 4 && top have space
             {
-                / caculate track distance and write top
+                // caculate track distance and write top
                 // 紀錄sstable level and key
                 // caculate write latency
             }
