@@ -23,7 +23,7 @@ double calculateSeekTime(int track_src, int track_des)
 double calculateIOLatency(int track_src, int track_des, bool isRMW)
 {
     double t_seek = calculateSeekTime(track_src, track_des);
-    if (isRMW)
+    if (isRMW) // 傳入1的話代表RMW
     {
         return 32 * (t_seek + 6 * t_rotation);
     }
@@ -107,6 +107,14 @@ bool judge_level(int &level)
         return 0;
 }
 
+bool judge_RMW(vector<int> &top_sstable_level, int index_position)
+{
+    if (top_sstable_level[index_position] == 0)
+        return 0;
+    else
+        return 1;
+}
+
 // 判斷level and key，先判斷key的存在，在判斷是否存在同個level，考慮覆寫情況
 int judge_overwrite(int &level, int &key, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key, int &index_position)
 {
@@ -142,8 +150,9 @@ int judge_overwrite(int &level, int &key, vector<int> &top_sstable_level, vector
 void allocate_SStable(int &track_sector, int &top_flag, int &bottom_flag, vector<int> &allocat_level, vector<int> &allocat_key, vector<int> &top_tracks, vector<int> &bottom_tracks, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key)
 {
     int i = 0, overwrite = 0, top_space = 0, level = 0,
-        index_position = 0;   // 定位index
+        index_position = 0;   // 定位sstable and key index
     int sstable_position = 0; // 換算index to track sector
+    bool isRMW = 0;
 
     for (i = 0; i < 4; i++) // 4張sstable
     {
@@ -169,6 +178,7 @@ void allocate_SStable(int &track_sector, int &top_flag, int &bottom_flag, vector
             // position bottom index
             sstable_position = (index_position * 32); // 還原sstable track位置，為sstable終點
             // judge RMW
+            isRMW = judge_RMW(top_sstable_level, index_position);
             // caculate track distance and write latency
             // 紀錄sector移動到哪裡
             track_sector = sstable_position;
