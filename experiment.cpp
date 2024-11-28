@@ -83,11 +83,22 @@ void extract_four_sstable(vector<int> &level, vector<int> &key, int index, vecto
 // wirte top
 void Write_top(vector<int> &top_tracks, int top_flag)
 {
-    int i;
+    int i = 0;
     for (i = 0; i < 32; i++)
     {
         top_tracks[top_flag] = 1;
         top_flag = top_flag + 1;
+    }
+}
+
+// wirte bottom
+void Write_bottom(vector<int> &bottom_tracks, int bottom_flag)
+{
+    int i = 0;
+    for (i = 0; i < 32; i++)
+    {
+        bottom_tracks[bottom_flag] = 1;
+        bottom_flag = bottom_flag - 1;
     }
 }
 
@@ -97,6 +108,15 @@ void Record_top_sstable(vector<int> &top_sstable_level, vector<int> &top_sstable
     int index = flag / 32;
     top_sstable_level[index] = level;
     top_sstable_key[index] = key;
+}
+
+// record bottom sstable level and key
+void Record_bottom_sstable(vector<int> &bottom_sstable_level, vector<int> &bottom_sstable_key, int &level, int &key, int flag)
+{
+    int index = flag / 32;
+    index = index - 1; // 不同於record top 是因為我把bottom多設一個track，會導致10240/32=320，但是array index只到319，必須減一。
+    bottom_sstable_level[index] = level;
+    bottom_sstable_key[index] = key;
 }
 
 bool judge_level(int &level)
@@ -192,7 +212,7 @@ void allocate_SStable(int &track_sector, int &top_flag, int &bottom_flag, vector
                 Write_top(top_tracks, top_flag);
                 // 紀錄sstable level and key
                 Record_top_sstable(top_sstable_level, top_sstable_key, allocat_level[i], allocat_key[i], top_flag);
-                // caculate write latency
+                // caculate write latency, use track_sector and top_flag
                 // 紀錄sector移動到哪裡
                 if (top_flag == 0)
                     track_sector = track_sector + 31;
@@ -204,8 +224,22 @@ void allocate_SStable(int &track_sector, int &top_flag, int &bottom_flag, vector
             else
             {
                 // write bottom
+                Write_bottom(bottom_tracks, bottom_flag);
+                // 紀錄sstable level and key
+                Record_bottom_sstable(bottom_sstable_level, bottom_sstable_key, allocat_level[i], allocat_key[i], bottom_flag);
                 // judge RMW
-                // caculate track distance and write latency
+                if (top_flag > (bottom_flag - 32)) // 代表交叉
+                    isRMW = 1;
+                else
+                    isRMW = 0;
+                // caculate track distance and write latency, use track_sector and bottom_flag
+                // 紀錄sector移動到哪裡
+                if (bottom_flag == 10240)
+                    track_sector = track_sector - 31;
+                else
+                    track_sector = track_sector - 32;
+                // 最後定位bottom track目前存到哪裡
+                bottom_flag = bottom_flag - 32;
             }
         }
     }
