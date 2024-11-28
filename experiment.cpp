@@ -228,7 +228,7 @@ void allocate_SStable(int &track_sector, int &top_flag, int &bottom_flag, vector
                 // 紀錄sstable level and key
                 Record_bottom_sstable(bottom_sstable_level, bottom_sstable_key, allocat_level[i], allocat_key[i], bottom_flag);
                 // judge RMW
-                if (top_flag > (bottom_flag - 32)) // 代表交叉
+                if (top_flag > bottom_flag) // 代表交叉
                     isRMW = 1;
                 else
                     isRMW = 0;
