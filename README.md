@@ -1,6 +1,8 @@
 # 實驗程式碼 
 experiment.cpp
 
+three_phase.cpp
+
 # 實驗data生成
 generate_sstable.cpp
 
