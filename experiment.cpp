@@ -6,7 +6,6 @@
 #include <cmath>
 
 using namespace std;
-const int KB_TO_MB = 1024;
 const int BOTTOM_TRACKS = 10241; // bottom tracks 20GB, 下比上多一比較好計算
 const int TOP_TRACKS = 10240;    // top tracks 20GB
 const int INDEX = 320;           // 10240/32=320, 用於簡化紀錄在track上的level,key
@@ -24,13 +23,9 @@ double calculateIOLatency(int track_src, int track_des, bool isRMW)
 {
     double t_seek = calculateSeekTime(track_src, track_des);
     if (isRMW) // 傳入1的話代表RMW
-    {
         return 32 * (t_seek + 6 * t_rotation);
-    }
     else
-    {
         return 32 * (t_seek + 0.5 * t_rotation);
-    }
 }
 
 // 讀取檔案並將資料分別儲存到兩個陣列中
@@ -167,7 +162,7 @@ int judge_overwrite(int &level, int &key, vector<int> &top_sstable_level, vector
     return 0; // 不存在
 }
 
-void allocate_SStable(int &track_sector, int &top_flag, int &bottom_flag, vector<int> &allocat_level, vector<int> &allocat_key, vector<int> &top_tracks, vector<int> &bottom_tracks, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key)
+void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, int &top_flag, int &bottom_flag, vector<int> &allocat_level, vector<int> &allocat_key, vector<int> &top_tracks, vector<int> &bottom_tracks, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key)
 {
     int i = 0, overwrite = 0, top_space = 0, level = 0,
         index_position = 0;   // 定位sstable and key index
@@ -189,6 +184,7 @@ void allocate_SStable(int &track_sector, int &top_flag, int &bottom_flag, vector
             // position top index
             sstable_position = (index_position * 32); // 還原sstable track位置，為sstable起點
             // caculate track distance and write latency
+            latency = latency + calculateIOLatency(track_sector, sstable_position, 0);
             // 紀錄sector移動到哪裡
             track_sector = sstable_position;
             track_sector = track_sector + 31;
@@ -199,7 +195,11 @@ void allocate_SStable(int &track_sector, int &top_flag, int &bottom_flag, vector
             sstable_position = (index_position * 32); // 還原sstable track位置，為sstable終點
             // judge RMW
             isRMW = judge_RMW(top_sstable_level, index_position);
+            // caculate top overwrite
+            if (isRMW)
+                top_overwrite = top_overwrite + 32;
             // caculate track distance and write latency
+            latency = latency + calculateIOLatency(track_sector, sstable_position, isRMW);
             // 紀錄sector移動到哪裡
             track_sector = sstable_position;
         }
@@ -213,6 +213,7 @@ void allocate_SStable(int &track_sector, int &top_flag, int &bottom_flag, vector
                 // 紀錄sstable level and key
                 Record_top_sstable(top_sstable_level, top_sstable_key, allocat_level[i], allocat_key[i], top_flag);
                 // caculate write latency, use track_sector and top_flag
+                latency = latency + calculateIOLatency(track_sector, top_flag, 0);
                 // 紀錄sector移動到哪裡
                 if (top_flag == 0)
                     track_sector = track_sector + 31;
@@ -232,7 +233,11 @@ void allocate_SStable(int &track_sector, int &top_flag, int &bottom_flag, vector
                     isRMW = 1;
                 else
                     isRMW = 0;
+                // caculate top overwrite
+                if (isRMW)
+                    top_overwrite = top_overwrite + 32;
                 // caculate track distance and write latency, use track_sector and bottom_flag
+                latency = latency + calculateIOLatency(track_sector, bottom_flag, isRMW);
                 // 紀錄sector移動到哪裡
                 if (bottom_flag == 10240)
                     track_sector = track_sector - 31;
@@ -244,6 +249,29 @@ void allocate_SStable(int &track_sector, int &top_flag, int &bottom_flag, vector
         }
     }
 }
+
+// outout
+void write_to_output(const string &filename, double &latency, int &top_overwrite, int i)
+{
+    ofstream outfile(filename, ios::app); // 開啟檔案
+    if (!outfile.is_open())               // 檢查是否成功開啟
+    {
+        cerr << "Error: Unable to open file " << filename << endl;
+        return;
+    }
+    // 換算GB
+    int GB = 10;
+    i = i / 120;
+    GB = GB * i;
+
+    outfile << "GB: " << GB << endl;
+    outfile << "latency: " << latency << "ms" << endl;
+    outfile << "top overwrite: " << top_overwrite << endl
+            << endl;
+
+    outfile.close();
+}
+
 int main(void)
 {
     vector<int> level;
@@ -260,7 +288,8 @@ int main(void)
     vector<int> bottom_sstable_key(INDEX);
     int track_sector = 0;                  // sector position
     int top_flag = 0, bottom_flag = 10240; // record top and bottom track store where
-    double latency = 0;
+    double latency = 0;                    // write latency
+    int top_overwrite = 0;                 // 紀錄top複寫次數
 
     int i = 0;
     // 呼叫函式讀取檔案，並將結果存入 level 和 key 陣列中
@@ -269,6 +298,8 @@ int main(void)
     for (i = 0; i < 480; i += 4)
     {
         extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
-        allocate_SStable(track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
+        allocate_SStable(latency, top_overwrite, track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
+        if (i != 0 && i % 120 == 0) // 每10GB輸出一次資訊
+            write_to_output("output_file.txt", latency, top_overwrite, i);
     }
 }
