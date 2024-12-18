@@ -192,7 +192,8 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
         else if (overwrite == 2) // overwrite on bottom
         {
             // position bottom index
-            sstable_position = (index_position * 32); // 還原sstable track位置，為sstable終點
+            sstable_position = (index_position * 32); // 還原sstable track位置，為sstable終點的下一個
+            sstable_position = sstable_position + 32; // 抓出sstable起點位置
             // judge RMW
             isRMW = judge_RMW(top_sstable_level, index_position);
             // caculate top overwrite
@@ -201,7 +202,7 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
             // caculate track distance and write latency
             latency = latency + calculateIOLatency(track_sector, sstable_position, isRMW);
             // 紀錄sector移動到哪裡
-            track_sector = sstable_position;
+            track_sector = sstable_position - 31;
         }
         else // write on new tracks
         {
