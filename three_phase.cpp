@@ -184,8 +184,12 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
             // judge RMW
             isRMW = judge_RMW(top_sstable_level, index_position);
             // caculate top overwrite
-            if (isRMW)
+            if (isRMW == 2)
                 top_overwrite = top_overwrite + 32;
+            else if (isRMW == 1)
+                top_overwrite = top_overwrite + 16;
+            else
+                top_overwrite = top_overwrite;
             // caculate track distance and write latency
             // 紀錄sector移動到哪裡
             track_sector = sstable_position;
