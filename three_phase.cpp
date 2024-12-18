@@ -193,13 +193,19 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
             // caculate track distance and write latency
             // 紀錄sector移動到哪裡
             track_sector = sstable_position;
-            track_sector = track_sector + 32;
+            track_sector = track_sector + 31;
         }
         else if (overwrite == 2) // overwrite top even
         {
+            // position top index
+            // caculate track distance and write latency
+            // 紀錄sector移動到哪裡
         }
         else if (overwrite == 3) // overwrite top odd
         {
+            // position top index
+            // caculate track distance and write latency
+            // 紀錄sector移動到哪裡
         }
         else // write new track
         {
@@ -241,10 +247,10 @@ int main(void)
     // track上存的key
     vector<int> top_sstable_key(INDEX);
     vector<int> bottom_sstable_key(INDEX);
-    int top_flag = 0, bottom_flag = 10240; // record top and bottom track store where
-    int track_sector = 0;                  // sector position
-    double latency = 0;                    // write latency
-    int top_overwrite = 0;                 // 紀錄top複寫次數
+    int top_flag = 0, bottom_flag = 0; // record top and bottom track store where
+    int track_sector = 0;              // sector position
+    double latency = 0;                // write latency
+    int top_overwrite = 0;             // 紀錄top複寫次數
 
     int i = 0;
     // 呼叫函式讀取檔案，並將結果存入 level 和 key 陣列中
