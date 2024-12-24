@@ -141,6 +141,23 @@ void Record_bottom_sstable(vector<int> &bottom_sstable_level, vector<int> &botto
     bottom_sstable_key[index] = key;
 }
 
+// write top
+void write_top(vector<int> &top_tracks, int top_flag, bool even_or_odd)
+{
+    int i = 0;
+    if (even_or_odd == 0) // even
+    {
+        for (i = 0; i < 32; i++)
+        {
+            top_tracks[top_flag] = 1;
+            top_flag = top_flag + 2;
+        }
+    }
+    else // odd
+    {
+    }
+}
+
 // isRmw
 int judge_RMW(vector<int> &top_sstable_level, int index_position)
 {
@@ -204,14 +221,18 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
         else if (overwrite == 2) // overwrite top even
         {
             // position top index
+            sstable_position = (index_position * 32); // sstable的起點sector
             // caculate track distance and write latency
             // 紀錄sector移動到哪裡
+            track_sector = sstable_position + 62;
         }
         else if (overwrite == 3) // overwrite top odd
         {
             // position top index
+            sstable_position = (index_position * 32) - 31; // sstable的起點sector
             // caculate track distance and write latency
             // 紀錄sector移動到哪裡
+            track_sector = sstable_position + 62;
         }
         else // write new track
         {
@@ -232,8 +253,21 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
             }
             else // store on top
             {
-                // even
-                // odd
+                if (top_sstable_level[318] == 0) // even
+                {
+                    // write top
+                    write_top(top_tracks, top_flag, 0);
+                    // 紀錄sstable and key info.
+                    // caculate write latency, use track_sector and top_flag
+                    // 紀錄sector移動到哪裡
+                    // 最後定位top flag到哪裡
+                    top_flag = top_flag + 64;
+                }
+                else // odd
+                {
+                    // write top
+                    write_top(top_tracks, top_flag, 1);
+                }
             }
         }
     }
