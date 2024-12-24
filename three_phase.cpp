@@ -19,7 +19,7 @@ double calculateSeekTime(int track_src, int track_des)
 }
 
 // 計算I/O延遲
-double calculateIOLatency(int track_src, int track_des, int isRMW)
+double calculateIOLatency(int track_src, int track_des, int isRMW, bool top_or_bottom)
 {
     double t_seek = calculateSeekTime(track_src, track_des);
     if (isRMW == 1) // 傳入1的話代表半個RMW
@@ -27,7 +27,12 @@ double calculateIOLatency(int track_src, int track_des, int isRMW)
     else if (isRMW == 2)
         return 32 * (t_seek + 6 * t_rotation);
     else
-        return 32 * (t_seek + 0.5 * t_rotation);
+    {
+        if (top_or_bottom) // write bottom latency
+            return 32 * (t_seek + 0.5 * t_rotation);
+        else // write top latency
+            return 64 * (t_seek + 0.5 * t_rotation);
+    }
 }
 
 // 讀取檔案並將資料分別儲存到兩個陣列中
@@ -159,6 +164,7 @@ int judge_RMW(vector<int> &top_sstable_level, int index_position)
             return 2;
     }
 }
+
 void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, int &top_flag, int &bottom_flag, vector<int> &allocat_level, vector<int> &allocat_key, vector<int> &top_tracks, vector<int> &bottom_tracks, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key)
 {
     int i = 0, bottom_space = 0, overwrite = 0,
