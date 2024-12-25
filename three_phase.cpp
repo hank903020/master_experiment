@@ -142,19 +142,13 @@ void Record_bottom_sstable(vector<int> &bottom_sstable_level, vector<int> &botto
 }
 
 // write top
-void write_top(vector<int> &top_tracks, int top_flag, bool even_or_odd)
+void write_top(vector<int> &top_tracks, int top_flag)
 {
     int i = 0;
-    if (even_or_odd == 0) // even
+    for (i = 0; i < 32; i++)
     {
-        for (i = 0; i < 32; i++)
-        {
-            top_tracks[top_flag] = 1;
-            top_flag = top_flag + 2;
-        }
-    }
-    else // odd
-    {
+        top_tracks[top_flag] = 1;
+        top_flag = top_flag + 2;
     }
 }
 
@@ -242,7 +236,7 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
                 write_bottom(bottom_tracks, bottom_flag);
                 // 紀錄sstable and key info.
                 Record_bottom_sstable(bottom_sstable_level, bottom_sstable_key, allocat_level[i], allocat_key[i], bottom_flag);
-                // caculate write latency, use track_sector and top_flag
+                // caculate write latency, use track_sector and bottom_flag
                 // 紀錄sector移動到哪裡
                 if (bottom_flag == 0)
                     track_sector = track_sector + 31;
@@ -256,7 +250,7 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
                 if (top_sstable_level[318] == 0) // even
                 {
                     // write top
-                    write_top(top_tracks, top_flag, 0);
+                    write_top(top_tracks, top_flag);
                     // 紀錄sstable and key info.
                     // caculate write latency, use track_sector and top_flag
                     // 紀錄sector移動到哪裡
@@ -265,8 +259,16 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
                 }
                 else // odd
                 {
+                    // judge first time write to odd
+                    if (top_sstable_level[1] == 0)
+                        top_flag = 1;
                     // write top
-                    write_top(top_tracks, top_flag, 1);
+                    write_top(top_tracks, top_flag);
+                    // 紀錄sstable and key info.
+                    // caculate write latency, use track_sector and top_flag
+                    // 紀錄sector移動到哪裡
+                    // 最後定位top flag到哪裡
+                    top_flag = top_flag + 64;
                 }
             }
         }
