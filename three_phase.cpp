@@ -28,7 +28,7 @@ double calculateIOLatency(int track_src, int track_des, int isRMW, bool top_or_b
         return 32 * (t_seek + 6 * t_rotation);
     else
     {
-        if (top_or_bottom) // write bottom latency
+        if (top_or_bottom) // 1 = write bottom latency
             return 32 * (t_seek + 0.5 * t_rotation);
         else // write top latency
             return 64 * (t_seek + 0.5 * t_rotation);
@@ -151,6 +151,24 @@ void write_top(vector<int> &top_tracks, int top_flag)
         top_flag = top_flag + 2;
     }
 }
+// record top level and key
+void Record_top_sstable(vector<int> &top_sstable_level, vector<int> &top_sstable_key, int &level, int &key, int flag, bool even_or_odd)
+{
+    int index = 0;
+    if (even_or_odd == 0) // even
+    {
+        index = flag / 32;
+        top_sstable_level[index] = level;
+        top_sstable_key[index] = key;
+    }
+    else
+    {
+        index = flag / 32;
+        index = index + 1;
+        top_sstable_level[index] = level;
+        top_sstable_key[index] = key;
+    }
+}
 
 // isRmw
 int judge_RMW(vector<int> &top_sstable_level, int index_position)
@@ -252,8 +270,10 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
                     // write top
                     write_top(top_tracks, top_flag);
                     // 紀錄sstable and key info.
+                    Record_top_sstable(top_sstable_level, top_sstable_key, allocat_level[i], allocat_key[i], top_flag, 0);
                     // caculate write latency, use track_sector and top_flag
                     // 紀錄sector移動到哪裡
+                    track_sector = track_sector + 62;
                     // 最後定位top flag到哪裡
                     top_flag = top_flag + 64;
                 }
@@ -265,8 +285,10 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
                     // write top
                     write_top(top_tracks, top_flag);
                     // 紀錄sstable and key info.
+                    Record_top_sstable(top_sstable_level, top_sstable_key, allocat_level[i], allocat_key[i], top_flag, 1);
                     // caculate write latency, use track_sector and top_flag
                     // 紀錄sector移動到哪裡
+                    track_sector = track_sector + 62;
                     // 最後定位top flag到哪裡
                     top_flag = top_flag + 64;
                 }
@@ -301,6 +323,6 @@ int main(void)
     for (i = 0; i < 480; i += 4)
     {
         extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
-        // allocate_SStable(latency, top_overwrite, track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
+        allocate_SStable(latency, top_overwrite, track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
     }
 }
