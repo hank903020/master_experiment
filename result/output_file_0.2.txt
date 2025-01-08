@@ -1,0 +1,30 @@
+GB: 5
+latency: 24634.3ms
+top: 2496 bottom: 10112
+top overwrite: 0
+
+GB: 10
+latency: 60750.8ms
+top: 4672 bottom: 9856
+top overwrite: 0
+
+GB: 15
+latency: 98655.6ms
+top: 6560 bottom: 9600
+top overwrite: 0
+
+GB: 20
+latency: 140043ms
+top: 8320 bottom: 9344
+top overwrite: 0
+
+GB: 25
+latency: 192954ms
+top: 9824 bottom: 9088
+top overwrite: 128
+
+GB: 30
+latency: 314212ms
+top: 10240 bottom: 7648
+top overwrite: 1568
+
