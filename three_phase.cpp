@@ -308,6 +308,28 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
     }
 }
 
+// outout
+void write_to_output(const string &filename, double &latency, int &top_overwrite, int i)
+{
+    ofstream outfile(filename, ios::app); // 開啟檔案
+    if (!outfile.is_open())               // 檢查是否成功開啟
+    {
+        cerr << "Error: Unable to open file " << filename << endl;
+        return;
+    }
+    // 換算GB
+    int GB = 10;
+    i = i / 160;
+    GB = GB * i;
+
+    outfile << "GB: " << GB << endl;
+    outfile << "latency: " << latency << "ms" << endl;
+    outfile << "top overwrite: " << top_overwrite << endl
+            << endl;
+
+    outfile.close();
+}
+
 int main(void)
 {
     vector<int> level;
@@ -327,6 +349,7 @@ int main(void)
     double latency = 0;                // write latency
     int top_overwrite = 0;             // 紀錄top複寫次數
 
+    /******************************************************************************/
     int i = 0;
     // 呼叫函式讀取檔案，並將結果存入 level 和 key 陣列中
     readSSTableFile("sstable_info_0.1.txt", level, key);
@@ -335,5 +358,9 @@ int main(void)
     {
         extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
         allocate_SStable(latency, top_overwrite, track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
+        if (i != 0 && i % 160 == 0) // 每10GB輸出一次資訊
+            write_to_output("output_file_threephase.txt", latency, top_overwrite, i);
     }
+    write_to_output("output_file_threephase.txt", latency, top_overwrite, i);
+    /******************************************************************************/
 }
