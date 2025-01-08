@@ -226,6 +226,7 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
             else
                 top_overwrite = top_overwrite;
             // caculate track distance and write latency
+            latency = latency + calculateIOLatency(track_sector, sstable_position, isRMW, 1);
             // 紀錄sector移動到哪裡
             track_sector = sstable_position;
             track_sector = track_sector + 31;
@@ -235,6 +236,8 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
             // position top index
             sstable_position = (index_position * 32); // sstable的起點sector
             // caculate track distance and write latency
+            isRMW = 0;
+            latency = latency + calculateIOLatency(track_sector, sstable_position, isRMW, 0);
             // 紀錄sector移動到哪裡
             track_sector = sstable_position + 62;
         }
@@ -243,6 +246,8 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
             // position top index
             sstable_position = (index_position * 32) - 31; // sstable的起點sector
             // caculate track distance and write latency
+            isRMW = 0;
+            latency = latency + calculateIOLatency(track_sector, sstable_position, isRMW, 0);
             // 紀錄sector移動到哪裡
             track_sector = sstable_position + 62;
         }
@@ -255,6 +260,8 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
                 // 紀錄sstable and key info.
                 Record_bottom_sstable(bottom_sstable_level, bottom_sstable_key, allocat_level[i], allocat_key[i], bottom_flag);
                 // caculate write latency, use track_sector and bottom_flag
+                isRMW = 0;
+                latency = latency + calculateIOLatency(track_sector, sstable_position, isRMW, 1);
                 // 紀錄sector移動到哪裡
                 if (bottom_flag == 0)
                     track_sector = track_sector + 31;
@@ -272,6 +279,8 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
                     // 紀錄sstable and key info.
                     Record_top_sstable(top_sstable_level, top_sstable_key, allocat_level[i], allocat_key[i], top_flag, 0);
                     // caculate write latency, use track_sector and top_flag
+                    isRMW = 0;
+                    latency = latency + calculateIOLatency(track_sector, sstable_position, isRMW, 0);
                     // 紀錄sector移動到哪裡
                     track_sector = track_sector + 62;
                     // 最後定位top flag到哪裡
@@ -287,6 +296,8 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
                     // 紀錄sstable and key info.
                     Record_top_sstable(top_sstable_level, top_sstable_key, allocat_level[i], allocat_key[i], top_flag, 1);
                     // caculate write latency, use track_sector and top_flag
+                    isRMW = 0;
+                    latency = latency + calculateIOLatency(track_sector, sstable_position, isRMW, 0);
                     // 紀錄sector移動到哪裡
                     track_sector = track_sector + 62;
                     // 最後定位top flag到哪裡
