@@ -40,25 +40,26 @@ void readSSTableFile(const string &filename, vector<int> &level, vector<int> &ke
     }
 
     string line;
-    while (getline(infile, line))
-    {
+    int index = 0; // 用來追蹤目前存入的位置
+
+    while (getline(infile, line) && index < 480)
+    { // 確保不超過 vector 的大小
         stringstream ss(line);
         string temp;
-        int l, k;
 
         // 讀取逗號前的第一個數字 (level)
         if (getline(ss, temp, ','))
         {
-            l = stoi(temp);     // 將字串轉換為整數
-            level.push_back(l); // 儲存到 level 陣列
+            level[index] = stoi(temp); // 將字串轉換為整數並存入 level
         }
 
         // 讀取逗號後的第二個數字 (key)
         if (getline(ss, temp, ','))
         {
-            k = stoi(temp);   // 將字串轉換為整數
-            key.push_back(k); // 儲存到 key 陣列
+            key[index] = stoi(temp); // 將字串轉換為整數並存入 key
         }
+
+        index++; // 更新索引
     }
 
     infile.close();
@@ -192,7 +193,7 @@ void allocate_SStable(double &latency, int &top_overwrite, int &track_sector, in
         else if (overwrite == 2) // overwrite on bottom
         {
             // position bottom index
-            sstable_position = (index_position * 32); // 還原sstable track位置，為sstable終點的下一個
+            sstable_position = (index_position * 32); // 還原sstable track位置，為sstable終點的下一個 //index_position在judge_overwrite裡面抓出來
             sstable_position = sstable_position + 32; // 抓出sstable起點位置
             // judge RMW
             isRMW = judge_RMW(top_sstable_level, index_position);
@@ -277,8 +278,8 @@ void write_to_output(const string &filename, double &latency, int &top_overwrite
 
 int main(void)
 {
-    vector<int> level;
-    vector<int> key;
+    vector<int> level(480);                   // 讀取存入vector
+    vector<int> key(480);                     // 讀取存入vector
     vector<int> allocat_level(4);             // 提取4個level
     vector<int> allocat_key(4);               // 提取4個key
     vector<int> top_tracks(TOP_TRACKS);       // 紀錄top track被使用情形
@@ -297,7 +298,7 @@ int main(void)
     //******************************************************************************
     int i = 0;
     // 呼叫函式讀取檔案，並將結果存入 level 和 key 陣列中
-    readSSTableFile("sstable_info_0.1.txt", level, key);
+    readSSTableFile("sstable_info_0.3.txt", level, key);
 
     for (i = 0; i < 480; i += 4)
     {
