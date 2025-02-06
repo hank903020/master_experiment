@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <random>
 #include <sstream>
+#include <ctime>
 
 using namespace std;
 
@@ -37,8 +38,9 @@ void generateSSTableInfo(float x)
     }
 
     // 隨機分配唯一鍵
-    random_device rd;
-    mt19937 g(rd());
+    unsigned seed;
+    seed = (unsigned)(time(0));
+    mt19937 g(seed);
     shuffle(keys.begin(), keys.end(), g);
 
     // 將多餘的48個鍵隨機重複到keys中
