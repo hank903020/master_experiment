@@ -1,0 +1,60 @@
+GB: 5
+latency: 23769.2ms
+top: 2560 bottom: 10112
+top overwrite: 0
+
+GB: 10
+latency: 59271ms
+top: 4672 bottom: 9856
+top overwrite: 0
+
+GB: 15
+latency: 99028.7ms
+top: 6752 bottom: 9600
+top overwrite: 0
+
+GB: 20
+latency: 144200ms
+top: 8736 bottom: 9344
+top overwrite: 0
+
+GB: 25
+latency: 225591ms
+top: 10240 bottom: 8672
+top overwrite: 672
+
+GB: 30
+latency: 387741ms
+top: 10240 bottom: 6432
+top overwrite: 2912
+
+GB: 5
+latency: 83755.5ms
+top: 10240 bottom: 5728
+top overwrite: 704
+
+GB: 10
+latency: 166864ms
+top: 10240 bottom: 4928
+top overwrite: 1504
+
+GB: 15
+latency: 254589ms
+top: 10240 bottom: 4096
+top overwrite: 2336
+
+GB: 20
+latency: 339877ms
+top: 10240 bottom: 3264
+top overwrite: 3168
+
+GB: 25
+latency: 418946ms
+top: 10240 bottom: 2560
+top overwrite: 3872
+
+GB: 30
+latency: 511173ms
+top: 10240 bottom: 1632
+top overwrite: 4800
+
