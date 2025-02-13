@@ -267,7 +267,14 @@ void write_to_output(const string &filename, double &latency, int &top_overwrite
     ii = ii / 160;
     GB = GB * ii;
 
+    // 計算目前真正使用大小 單位為MB
+    int use_top = 0, use_bottom = 0, total = 0;
+    use_top = (top_flag + 1) * 2;
+    use_bottom = (10240 - bottom_flag + 1) * 2;
+    total = use_top + use_bottom; // MB
+
     outfile << "GB: " << GB << endl;
+    // outfile << "actual use: " << total << "MB" << endl;
     outfile << "latency: " << latency << "ms" << endl;
     outfile << "top: " << top_flag << " " << "bottom: " << bottom_flag << endl;
     outfile << "top overwrite: " << top_overwrite << endl
@@ -308,16 +315,16 @@ int main(void)
     //********************************first**********************************************
     int i = 0;
     // 呼叫函式讀取檔案，並將結果存入 level 和 key 陣列中
-    readSSTableFile("sstable_info_0.2.txt", level, key);
+    readSSTableFile("sstable_info_0.3.txt", level, key);
 
     for (i = 0; i < 480; i += 4)
     {
         extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
         allocate_SStable(latency, top_overwrite, track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
         if (i != 0 && i % 80 == 0) // 每5GB輸出一次資訊
-            write_to_output("output_file_0.2x2.txt", latency, top_overwrite, top_flag, bottom_flag, i);
+            write_to_output("output_file_0.3x2.txt", latency, top_overwrite, top_flag, bottom_flag, i);
     }
-    write_to_output("output_file_0.2x2.txt", latency, top_overwrite, top_flag, bottom_flag, i);
+    write_to_output("output_file_0.3x2.txt", latency, top_overwrite, top_flag, bottom_flag, i);
     //********************************first**********************************************
 
     // initialization
@@ -325,15 +332,15 @@ int main(void)
 
     //********************************second******************************************
     // 呼叫函式讀取檔案，並將結果存入 level 和 key 陣列中
-    readSSTableFile("sstable_info_0.2.1.txt", level, key);
+    readSSTableFile("sstable_info_0.3.1.txt", level, key);
 
     for (i = 0; i < 480; i += 4)
     {
         extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
         allocate_SStable(latency, top_overwrite, track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
         if (i != 0 && i % 80 == 0) // 每5GB輸出一次資訊
-            write_to_output("output_file_0.2x2.txt", latency, top_overwrite, top_flag, bottom_flag, i);
+            write_to_output("output_file_0.3x2.txt", latency, top_overwrite, top_flag, bottom_flag, i);
     }
-    write_to_output("output_file_0.2x2.txt", latency, top_overwrite, top_flag, bottom_flag, i);
+    write_to_output("output_file_0.3x2.txt", latency, top_overwrite, top_flag, bottom_flag, i);
     //********************************second******************************************
 }
