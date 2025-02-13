@@ -326,8 +326,11 @@ void write_to_output(const string &filename, double &latency, int &top_overwrite
 
     // 計算目前真正使用大小 單位為MB
     int use_top = 0, use_bottom = 0, total = 0;
-    use_top = (top_flag + 1) * 2;
     use_bottom = (bottom_flag + 1) * 2;
+    if (top_flag % 2 == 0)
+        use_top = top_flag;
+    else
+        use_top = (top_flag + 1) * 2;
     total = use_top + use_bottom; // MB
 
     outfile << "GB: " << GB << endl;
