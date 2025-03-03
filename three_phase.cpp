@@ -369,7 +369,7 @@ int main(void)
     int track_sector = 0;              // sector position
     double latency = 0;                // write latency
     int top_overwrite = 0;             // 紀錄top複寫次數
-    double WAF = 0;
+    double WAF = 30720;
 
     //*******************************first***********************************************
     int i = 0;
