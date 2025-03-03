@@ -319,7 +319,7 @@ int main(void)
     int top_flag = 0, bottom_flag = 10240; // record top and bottom track store where
     double latency = 0;                    // write latency
     int top_overwrite = 0;                 // 紀錄top複寫次數
-    double WAF = 0;                        // 計算寫入放大
+    double WAF = 30720;                    // 計算寫入放大
 
     //********************************first**********************************************
     int i = 0;
