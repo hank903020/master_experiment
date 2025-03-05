@@ -199,7 +199,11 @@ void allocate_SStable(double &latency, double &WAF, int &top_overwrite, int &tra
             isRMW = judge_RMW(top_sstable_level, index_position);
             // caculate top overwrite
             if (isRMW)
+            {
                 top_overwrite = top_overwrite + 32;
+                WAF = WAF + 64;
+            }
+
             // caculate track distance and write latency
             latency = latency + calculateIOLatency(track_sector, sstable_position, isRMW);
             // 紀錄sector移動到哪裡
@@ -237,7 +241,11 @@ void allocate_SStable(double &latency, double &WAF, int &top_overwrite, int &tra
                     isRMW = 0;
                 // caculate top overwrite
                 if (isRMW)
+                {
                     top_overwrite = top_overwrite + 32;
+                    WAF = WAF + 64;
+                }
+
                 // caculate track distance and write latency, use track_sector and bottom_flag
                 latency = latency + calculateIOLatency(track_sector, bottom_flag, isRMW);
                 // 紀錄sector移動到哪裡
