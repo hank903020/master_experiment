@@ -221,9 +221,15 @@ void allocate_SStable(double &latency, double &WAF, int &top_overwrite, int &tra
             isRMW = judge_RMW(top_sstable_level, index_position);
             // caculate top overwrite
             if (isRMW == 2)
+            {
                 top_overwrite = top_overwrite + 32;
+                WAF = WAF + 64;
+            }
             else if (isRMW == 1)
+            {
                 top_overwrite = top_overwrite + 16;
+                WAF = WAF + 32;
+            }
             else
                 top_overwrite = top_overwrite;
             // caculate track distance and write latency
@@ -369,7 +375,7 @@ int main(void)
     int track_sector = 0;              // sector position
     double latency = 0;                // write latency
     int top_overwrite = 0;             // 紀錄top複寫次數
-    double WAF = 30720;
+    double WAF = 30720;                // 計算寫入放大
 
     //*******************************first***********************************************
     int i = 0;
