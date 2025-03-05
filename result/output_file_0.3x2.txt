@@ -27,6 +27,7 @@ GB: 30
 latency: 256650ms
 top: 10080 bottom: 8704
 top overwrite: 384
+write amplification factor: 1.025
 
 GB: 5
 latency: 57358.4ms
@@ -57,4 +58,5 @@ GB: 30
 latency: 381751ms
 top: 10240 bottom: 6336
 top overwrite: 2368
+write amplification factor: 1.15417
 
