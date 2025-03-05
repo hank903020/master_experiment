@@ -354,7 +354,7 @@ void initialization(vector<int> &level, vector<int> &key, double &latency, int &
     key.resize(480, 0);
     latency = 0;
     top_overwrite = 0;
-    WAF = 0;
+    WAF = 30720;
 }
 
 int main(void)
