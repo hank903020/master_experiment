@@ -377,19 +377,30 @@ int main(void)
     int top_overwrite = 0;             // 紀錄top複寫次數
     double WAF = 30720;                // 計算寫入放大
 
+    float x = 0.3; // 修改此變數，產出不同%數data
+    stringstream ss;
+    ss << "sstable_info_" << x << ".txt";
+    string filename = ss.str();
+    stringstream ss1;
+    ss1 << "sstable_info_" << x << ".1.txt";
+    string filename1 = ss1.str();
+    stringstream ss2;
+    ss2 << "output_file_" << x << "x2.txt";
+    string filenamex2 = ss2.str();
+
     //*******************************first***********************************************
     int i = 0;
     // 呼叫函式讀取檔案，並將結果存入 level 和 key 陣列中
-    readSSTableFile("sstable_info_0.3.txt", level, key);
+    readSSTableFile(filename, level, key);
 
     for (i = 0; i < 480; i += 4)
     {
         extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
         allocate_SStable(latency, WAF, top_overwrite, track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
         if (i != 0 && i % 80 == 0) // 每5GB輸出一次資訊
-            write_to_output("output_file_threephase_0.3x2.txt", latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+            write_to_output(filenamex2, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
     }
-    write_to_output("output_file_threephase_0.3x2.txt", latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+    write_to_output(filenamex2, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
     //**********************************first********************************************
 
     // initialization
@@ -397,15 +408,15 @@ int main(void)
 
     //********************************second******************************************
     // 呼叫函式讀取檔案，並將結果存入 level 和 key 陣列中
-    readSSTableFile("sstable_info_0.3.1.txt", level, key);
+    readSSTableFile(filename1, level, key);
 
     for (i = 0; i < 480; i += 4)
     {
         extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
         allocate_SStable(latency, WAF, top_overwrite, track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
         if (i != 0 && i % 80 == 0) // 每5GB輸出一次資訊
-            write_to_output("output_file_threephase_0.3x2.txt", latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+            write_to_output(filenamex2, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
     }
-    write_to_output("output_file_threephase_0.3x2.txt", latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+    write_to_output(filenamex2, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
     //********************************second******************************************
 }
