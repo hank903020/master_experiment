@@ -1,1 +1,205 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <cmath>
+using namespace std;
 
+const int BOTTOM_TRACKS = 10240; // bottom tracks 20GB
+const int TOP_TRACKS = 10240;    // top tracks 20GB
+const int INDEX = 320;           // 10240/32=320, 用於簡化紀錄在track上的level,key
+const double t_seek_min = 2.0;   // 最小尋道時間，單位：毫秒
+const double t_rotation = 10.0;  // 旋轉時間，單位：毫秒，假設為6000RPM，即一整圈10毫秒
+
+// 計算尋道時間，t_seek, a = 0.125779
+double calculateSeekTime(int track_src, int track_des)
+{
+    return 0.125779 * sqrt(2 * (abs(track_src - track_des))) + t_seek_min;
+}
+
+// 計算I/O延遲
+double calculateIOLatency(int track_src, int track_des, int isRMW, bool top_or_bottom)
+{
+    double t_seek = calculateSeekTime(track_src, track_des);
+    if (isRMW == 1) // 傳入1的話代表半個RMW
+        return 32 * (t_seek + 4 * t_rotation);
+    else if (isRMW == 2) // 2等於full rmw
+        return 32 * (t_seek + 6 * t_rotation);
+    else
+    {
+        if (top_or_bottom) // 1 = write bottom latency
+            return 32 * (t_seek + 0.5 * t_rotation);
+        else // write top latency
+            return 64 * (t_seek + 0.5 * t_rotation);
+    }
+}
+
+// 讀取檔案並將資料分別儲存到兩個陣列中
+void readSSTableFile(const string &filename, vector<int> &level, vector<int> &key)
+{
+    ifstream infile(filename);
+
+    if (!infile.is_open())
+    {
+        cerr << "無法開啟檔案" << endl;
+        return;
+    }
+
+    string line;
+    int index = 0; // 用來追蹤目前存入的位置
+
+    while (getline(infile, line) && index < 480)
+    { // 確保不超過 vector 的大小
+        stringstream ss(line);
+        string temp;
+
+        // 讀取逗號前的第一個數字 (level)
+        if (getline(ss, temp, ','))
+        {
+            level[index] = stoi(temp); // 將字串轉換為整數並存入 level
+        }
+
+        // 讀取逗號後的第二個數字 (key)
+        if (getline(ss, temp, ','))
+        {
+            key[index] = stoi(temp); // 將字串轉換為整數並存入 key
+        }
+
+        index++; // 更新索引
+    }
+
+    infile.close();
+}
+
+void extract_four_sstable(vector<int> &level, vector<int> &key, int index, vector<int> &allocat_level, vector<int> &allocat_key)
+{
+    int i = 0;
+    for (i = 0; i < 4; i++)
+    {
+        allocat_level[i] = level[index];
+        allocat_key[i] = key[index];
+        index = index + 1;
+    }
+}
+
+void allocate_SStable(double &latency, double &WAF, int &top_overwrite, int &track_sector, int &top_flag, int &bottom_flag, vector<int> &allocat_level, vector<int> &allocat_key, vector<int> &top_tracks, vector<int> &bottom_tracks, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key)
+{
+    int i = 0, bottom_space = 0, overwrite = 0,
+        index_position = 0;   // 定位sstable and key index
+    int sstable_position = 0; // 換算index to track sector
+    int isRMW = 0;
+
+    for (i = 0; i < 4; i++) // 4張sstable
+    {
+        // judge bottom space
+        if (bottom_tracks[10239] == 0)
+            bottom_space = 1; // 1=have space, 0=no space
+        else
+            bottom_space = 0;
+    }
+}
+// outout
+void write_to_output(const string &filename, double &latency, double &WAF, int &top_overwrite, int &top_flag, int &bottom_flag, int i)
+{
+    ofstream outfile(filename, ios::app); // 開啟檔案
+    if (!outfile.is_open())               // 檢查是否成功開啟
+    {
+        cerr << "Error: Unable to open file " << filename << endl;
+        return;
+    }
+    // 換算GB
+    double ii = i;
+    int GB = 10;
+    ii = ii / 160;
+    GB = GB * ii;
+
+    // output
+    outfile << "GB: " << GB << endl;
+    outfile << "latency: " << latency << "ms" << endl;
+    outfile << "top: " << top_flag << " " << "bottom: " << bottom_flag << endl;
+    outfile << "top overwrite: " << top_overwrite << endl;
+    if (i == 480)
+    {
+        double waf = 0;
+        waf = WAF / 30720;
+        outfile << "write amplification factor: " << waf << endl;
+    }
+    outfile << endl;
+
+    outfile.close();
+}
+
+void initialization(vector<int> &level, vector<int> &key, double &latency, int &top_overwrite, double &WAF)
+{
+    level.clear();
+    level.resize(480, 0);
+    key.clear();
+    key.resize(480, 0);
+    latency = 0;
+    top_overwrite = 0;
+    WAF = 30720;
+}
+int main(void)
+{
+    vector<int> level(480);                   // 讀取存入vector
+    vector<int> key(480);                     // 讀取存入vector
+    vector<int> allocat_level(4);             // 提取4個level
+    vector<int> allocat_key(4);               // 提取4個key
+    vector<int> top_tracks(TOP_TRACKS);       // 紀錄top track被使用情形
+    vector<int> bottom_tracks(BOTTOM_TRACKS); // 紀錄bottom track被使用情形
+    // track上存的level
+    vector<int> top_sstable_level(INDEX);
+    vector<int> bottom_sstable_level(INDEX);
+    // track上存的key
+    vector<int> top_sstable_key(INDEX);
+    vector<int> bottom_sstable_key(INDEX);
+    int top_flag = 0, bottom_flag = 0; // record top and bottom track store where
+    int track_sector = 0;              // sector position
+    double latency = 0;                // write latency
+    int top_overwrite = 0;             // 紀錄top複寫次數
+    double WAF = 30720;                // 計算寫入放大
+
+    float x = 0.3; // 修改此變數，產出不同%數data
+    stringstream ss;
+    ss << "sstable_info_" << x << ".txt";
+    string filename = ss.str();
+    stringstream ss1;
+    ss1 << "sstable_info_" << x << ".1.txt";
+    string filename1 = ss1.str();
+    stringstream ss2;
+    ss2 << "output_file_twostage_" << x << "x2.txt"; // output file name
+    string filenamex2 = ss2.str();
+
+    //*******************************first***********************************************
+    int i = 0;
+    // 呼叫函式讀取檔案，並將結果存入 level 和 key 陣列中
+    readSSTableFile(filename, level, key);
+
+    for (i = 0; i < 480; i += 4)
+    {
+        extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
+        allocate_SStable(latency, WAF, top_overwrite, track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
+        if (i != 0 && i % 80 == 0) // 每5GB輸出一次資訊
+            write_to_output(filenamex2, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+    }
+    write_to_output(filenamex2, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+    //**********************************first********************************************
+
+    // initialization
+    initialization(level, key, latency, top_overwrite, WAF);
+
+    //********************************second******************************************
+    // 呼叫函式讀取檔案，並將結果存入 level 和 key 陣列中
+    readSSTableFile(filename1, level, key);
+
+    for (i = 0; i < 480; i += 4)
+    {
+        extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
+        allocate_SStable(latency, WAF, top_overwrite, track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
+        if (i != 0 && i % 80 == 0) // 每5GB輸出一次資訊
+            write_to_output(filenamex2, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+    }
+    write_to_output(filenamex2, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+    //********************************second******************************************
+}
