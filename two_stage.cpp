@@ -76,6 +76,52 @@ void extract_four_sstable(vector<int> &level, vector<int> &key, int index, vecto
     }
 }
 
+bool judge_RMW(vector<int> &top_sstable_level, int index_position)
+{
+    if (top_sstable_level[index_position] == 0)
+        return 0;
+    else
+        return 1;
+}
+
+// write top
+void Write_top(vector<int> &top_tracks, int top_flag)
+{
+    int i = 0;
+    for (i = 0; i < 32; i++)
+    {
+        top_tracks[top_flag] = 1;
+        top_flag = top_flag + 1;
+    }
+}
+
+// record top sstable level and key
+void Record_top_sstable(vector<int> &top_sstable_level, vector<int> &top_sstable_key, int &level, int &key, int flag)
+{
+    int index = flag / 32;
+    top_sstable_level[index] = level;
+    top_sstable_key[index] = key;
+}
+
+// write bottom
+void write_bottom(vector<int> &bottom_tracks, int bottom_flag)
+{
+    int i = 0;
+    for (i = 0; i < 32; i++)
+    {
+        bottom_tracks[bottom_flag] = 1;
+        bottom_flag = bottom_flag + 1;
+    }
+}
+
+// record bottom level and key
+void Record_bottom_sstable(vector<int> &bottom_sstable_level, vector<int> &bottom_sstable_key, int &level, int &key, int flag)
+{
+    int index = flag / 32;
+    bottom_sstable_level[index] = level;
+    bottom_sstable_key[index] = key;
+}
+
 // 判斷level and key，先判斷key的存在，在判斷是否存在同個level，考慮覆寫情況
 int judge_overwrite(int &level, int &key, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key, int &index_position)
 {
@@ -129,34 +175,65 @@ void allocate_SStable(double &latency, double &WAF, int &top_overwrite, int &tra
         if (overwrite == 1) // overwrite bottom
         {
             // position bottom index
+            sstable_position = (index_position * 32); // 還原sstable在track上的位置，為sstable起點
             // judge RMW
+            isRMW = judge_RMW(top_sstable_level, index_position);
             // caculate top overwrite
+            if (isRMW)
+            {
+                top_overwrite = top_overwrite + 32;
+                WAF = WAF + 64;
+            }
             // caculate track distance and write latency
+            latency = latency + calculateIOLatency(track_sector, sstable_position, isRMW);
             // 紀錄sector移動到哪裡
+            track_sector = sstable_position;
+            track_sector = track_sector + 31;
         }
         else if (overwrite == 2) // overwrite top
         {
             // position top index
+            sstable_position = (index_position * 32); // 還原sstable track位置，為sstable起點
             // caculate track distance and write latency
+            latency = latency + calculateIOLatency(track_sector, sstable_position, 0);
             // 紀錄sector移動到哪裡
+            track_sector = sstable_position;
+            track_sector = track_sector + 31;
         }
         else // write new track
         {
             if (bottom_space) // bottom have space，優先存bottom不會有RMW問題，overwrite時才會有
             {
                 // write bottom
+                write_bottom(bottom_tracks, bottom_flag);
                 // 紀錄sstable and key info.
+                Record_bottom_sstable(bottom_sstable_level, bottom_sstable_key, allocat_level[i], allocat_key[i], bottom_flag);
                 // caculate write latency, use track_sector and bottom_flag
+                isRMW = 0;
+                latency = latency + calculateIOLatency(track_sector, bottom_flag, isRMW);
                 // 紀錄sector移動到哪裡
+                if (bottom_flag == 0)
+                    track_sector = track_sector + 31;
+                else
+                    track_sector = track_sector + 32;
                 // 最後定位bottom flag到哪裡
+                bottom_flag = bottom_flag + 32;
             }
             else // write top
             {
                 // write top
+                Write_top(top_tracks, top_flag);
                 // 紀錄sstable and key info.
+                Record_top_sstable(top_sstable_level, top_sstable_key, allocat_level[i], allocat_key[i], top_flag);
                 // caculate write latency, use track_sector and top_flag
+                latency = latency + calculateIOLatency(track_sector, top_flag, 0);
                 // 紀錄sector移動到哪裡
+                if (top_flag == 0)
+                    track_sector = track_sector + 31;
+                else
+                    track_sector = track_sector + 32;
                 // 最後定位top flag到哪裡
+                top_flag = top_flag + 32;
             }
         }
     }
