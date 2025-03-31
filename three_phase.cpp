@@ -385,7 +385,7 @@ int main(void)
     ss1 << "sstable_info_" << x << ".1.txt";
     string filename1 = ss1.str();
     stringstream ss2;
-    ss2 << "output_file_" << x << "x2.txt";
+    ss2 << "output_file_threephase_" << x << "x2.txt";
     string filenamex2 = ss2.str();
 
     //*******************************first***********************************************
