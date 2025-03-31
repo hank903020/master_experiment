@@ -3,6 +3,8 @@ experiment.cpp
 
 three_phase.cpp
 
+two_stage.cpp
+
 # 實驗data生成
 generate_sstable.cpp
 
