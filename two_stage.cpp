@@ -19,20 +19,13 @@ double calculateSeekTime(int track_src, int track_des)
 }
 
 // 計算I/O延遲
-double calculateIOLatency(int track_src, int track_des, int isRMW, bool top_or_bottom)
+double calculateIOLatency(int track_src, int track_des, bool isRMW)
 {
     double t_seek = calculateSeekTime(track_src, track_des);
-    if (isRMW == 1) // 傳入1的話代表半個RMW
-        return 32 * (t_seek + 4 * t_rotation);
-    else if (isRMW == 2) // 2等於full rmw
+    if (isRMW) // 傳入1的話代表RMW
         return 32 * (t_seek + 6 * t_rotation);
     else
-    {
-        if (top_or_bottom) // 1 = write bottom latency
-            return 32 * (t_seek + 0.5 * t_rotation);
-        else // write top latency
-            return 64 * (t_seek + 0.5 * t_rotation);
-    }
+        return 32 * (t_seek + 0.5 * t_rotation);
 }
 
 // 讀取檔案並將資料分別儲存到兩個陣列中
@@ -83,6 +76,38 @@ void extract_four_sstable(vector<int> &level, vector<int> &key, int index, vecto
     }
 }
 
+// 判斷level and key，先判斷key的存在，在判斷是否存在同個level，考慮覆寫情況
+int judge_overwrite(int &level, int &key, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key, int &index_position)
+{
+    int i = 0;
+    // judge bottom
+    for (i = 0; i < INDEX; i++)
+    {
+        if (key == bottom_sstable_key[i]) // 先判斷是否有一樣的key
+        {
+            if (level == bottom_sstable_level[i]) // 在判斷是否有一樣的level
+            {
+                index_position = i;
+                return 1; // 1 代表存在在bottom上
+            }
+        }
+    }
+    // judge top
+    for (i = 0; i < INDEX; i++)
+    {
+        if (key == top_sstable_key[i]) // 先判斷是否有一樣的key
+        {
+            if (level == top_sstable_level[i]) // 在判斷是否有一樣的level
+            {
+                index_position = i;
+                return 2; // 2 代表存在在top上
+            }
+        }
+    }
+
+    return 0; // no exist
+}
+
 void allocate_SStable(double &latency, double &WAF, int &top_overwrite, int &track_sector, int &top_flag, int &bottom_flag, vector<int> &allocat_level, vector<int> &allocat_key, vector<int> &top_tracks, vector<int> &bottom_tracks, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key)
 {
     int i = 0, bottom_space = 0, overwrite = 0,
@@ -97,6 +122,43 @@ void allocate_SStable(double &latency, double &WAF, int &top_overwrite, int &tra
             bottom_space = 1; // 1=have space, 0=no space
         else
             bottom_space = 0;
+
+        // judge overwrite
+        overwrite = judge_overwrite(allocat_level[i], allocat_key[i], top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key, index_position);
+
+        if (overwrite == 1) // overwrite bottom
+        {
+            // position bottom index
+            // judge RMW
+            // caculate top overwrite
+            // caculate track distance and write latency
+            // 紀錄sector移動到哪裡
+        }
+        else if (overwrite == 2) // overwrite top
+        {
+            // position top index
+            // caculate track distance and write latency
+            // 紀錄sector移動到哪裡
+        }
+        else // write new track
+        {
+            if (bottom_space) // bottom have space，優先存bottom不會有RMW問題，overwrite時才會有
+            {
+                // write bottom
+                // 紀錄sstable and key info.
+                // caculate write latency, use track_sector and bottom_flag
+                // 紀錄sector移動到哪裡
+                // 最後定位bottom flag到哪裡
+            }
+            else // write top
+            {
+                // write top
+                // 紀錄sstable and key info.
+                // caculate write latency, use track_sector and top_flag
+                // 紀錄sector移動到哪裡
+                // 最後定位top flag到哪裡
+            }
+        }
     }
 }
 // outout
@@ -140,6 +202,7 @@ void initialization(vector<int> &level, vector<int> &key, double &latency, int &
     top_overwrite = 0;
     WAF = 30720;
 }
+
 int main(void)
 {
     vector<int> level(480);                   // 讀取存入vector
