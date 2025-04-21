@@ -1,0 +1,111 @@
+GB: 5
+actual use: 5248MB
+latency: 26992.8ms
+top: 2496 bottom: 10112
+top overwrite: 0
+
+GB: 10
+actual use: 9728MB
+latency: 62632.9ms
+top: 4480 bottom: 9856
+top overwrite: 0
+
+GB: 15
+actual use: 13760MB
+latency: 104371ms
+top: 6240 bottom: 9600
+top overwrite: 0
+
+GB: 20
+actual use: 17280MB
+latency: 143776ms
+top: 7744 bottom: 9344
+top overwrite: 0
+
+GB: 25
+actual use: 20352MB
+latency: 191714ms
+top: 9024 bottom: 9088
+top overwrite: 0
+
+GB: 30
+actual use: 23232MB
+latency: 256650ms
+top: 10080 bottom: 8704
+top overwrite: 384
+write amplification factor: 1.025
+
+GB: 5
+actual use: 24000MB
+latency: 57358.4ms
+top: 10240 bottom: 8480
+top overwrite: 224
+
+GB: 10
+actual use: 24960MB
+latency: 126180ms
+top: 10240 bottom: 8000
+top overwrite: 704
+
+GB: 15
+actual use: 25728MB
+latency: 188709ms
+top: 10240 bottom: 7616
+top overwrite: 1088
+
+GB: 20
+actual use: 26304MB
+latency: 245390ms
+top: 10240 bottom: 7328
+top overwrite: 1376
+
+GB: 25
+actual use: 27328MB
+latency: 315851ms
+top: 10240 bottom: 6816
+top overwrite: 1888
+
+GB: 30
+actual use: 28288MB
+latency: 381751ms
+top: 10240 bottom: 6336
+top overwrite: 2368
+write amplification factor: 1.15417
+
+GB: 5
+actual use: 28992MB
+latency: 60864.5ms
+top: 10240 bottom: 5984
+top overwrite: 352
+
+GB: 10
+actual use: 29632MB
+latency: 120130ms
+top: 10240 bottom: 5664
+top overwrite: 672
+
+GB: 15
+actual use: 30272MB
+latency: 181254ms
+top: 10240 bottom: 5344
+top overwrite: 992
+
+GB: 20
+actual use: 30912MB
+latency: 243768ms
+top: 10240 bottom: 5024
+top overwrite: 1312
+
+GB: 25
+actual use: 31552MB
+latency: 301310ms
+top: 10240 bottom: 4704
+top overwrite: 1632
+
+GB: 30
+actual use: 32448MB
+latency: 364155ms
+top: 10240 bottom: 4256
+top overwrite: 2080
+write amplification factor: 1.13542
+
