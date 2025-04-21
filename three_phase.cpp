@@ -11,6 +11,7 @@ const int TOP_TRACKS = 10240;    // top tracks 20GB
 const int INDEX = 320;           // 10240/32=320, 用於簡化紀錄在track上的level,key
 const double t_seek_min = 2.0;   // 最小尋道時間，單位：毫秒
 const double t_rotation = 10.0;  // 旋轉時間，單位：毫秒，假設為6000RPM，即一整圈10毫秒
+int more_sstable = 0;
 
 // 計算尋道時間，t_seek, a = 0.125779
 double calculateSeekTime(int track_src, int track_des)
@@ -197,7 +198,7 @@ int judge_RMW(vector<int> &top_sstable_level, int index_position)
 
 void allocate_SStable(double &latency, double &WAF, int &top_overwrite, int &track_sector, int &top_flag, int &bottom_flag, vector<int> &allocat_level, vector<int> &allocat_key, vector<int> &top_tracks, vector<int> &bottom_tracks, vector<int> &top_sstable_level, vector<int> &bottom_sstable_level, vector<int> &top_sstable_key, vector<int> &bottom_sstable_key)
 {
-    int i = 0, bottom_space = 0, overwrite = 0,
+    int i = 0, bottom_space = 0, overwrite = 0, top_space = 0,
         index_position = 0;   // 定位sstable and key index
     int sstable_position = 0; // 換算index to track sector
     int isRMW = 0;
@@ -209,6 +210,11 @@ void allocate_SStable(double &latency, double &WAF, int &top_overwrite, int &tra
             bottom_space = 1; // 1=have space, 0=no space
         else
             bottom_space = 0;
+        // judge top space
+        if (top_tracks[10239] == 0)
+            top_space = 1; // 1=have space, 0=no space
+        else
+            top_space = 0;
 
         // judge overwrite
         overwrite = judge_overwrite(allocat_level[i], allocat_key[i], top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key, index_position);
@@ -295,20 +301,27 @@ void allocate_SStable(double &latency, double &WAF, int &top_overwrite, int &tra
                 }
                 else // odd
                 {
-                    // judge first time write to odd
-                    if (top_sstable_level[1] == 0)
-                        top_flag = 1;
-                    // write top
-                    write_top(top_tracks, top_flag);
-                    // 紀錄sstable and key info.
-                    Record_top_sstable(top_sstable_level, top_sstable_key, allocat_level[i], allocat_key[i], top_flag, 1);
-                    // caculate write latency, use track_sector and top_flag
-                    isRMW = 0;
-                    latency = latency + calculateIOLatency(track_sector, top_flag, isRMW, 0);
-                    // 紀錄sector移動到哪裡
-                    track_sector = track_sector + 62;
-                    // 最後定位top flag到哪裡
-                    top_flag = top_flag + 64;
+                    if (top_space == 1) // 多次輸入時，當top空間夠時才執行
+                    {
+                        // judge first time write to odd
+                        if (top_sstable_level[1] == 0)
+                            top_flag = 1;
+                        // write top
+                        write_top(top_tracks, top_flag);
+                        // 紀錄sstable and key info.
+                        Record_top_sstable(top_sstable_level, top_sstable_key, allocat_level[i], allocat_key[i], top_flag, 1);
+                        // caculate write latency, use track_sector and top_flag
+                        isRMW = 0;
+                        latency = latency + calculateIOLatency(track_sector, top_flag, isRMW, 0);
+                        // 紀錄sector移動到哪裡
+                        track_sector = track_sector + 62;
+                        // 最後定位top flag到哪裡
+                        top_flag = top_flag + 64;
+                    }
+                    else
+                    {
+                        more_sstable += 1; // 多次輸入時，計算多餘sstable
+                    }
                 }
             }
         }
@@ -377,16 +390,26 @@ int main(void)
     int top_overwrite = 0;             // 紀錄top複寫次數
     double WAF = 30720;                // 計算寫入放大
 
-    float x = 0.3; // 修改此變數，產出不同%數data
+    float x = 0.2; // 修改此變數，產出不同%數data
     stringstream ss;
     ss << "sstable_info_" << x << ".txt";
     string filename = ss.str();
+
     stringstream ss1;
     ss1 << "sstable_info_" << x << ".1.txt";
     string filename1 = ss1.str();
+
     stringstream ss2;
     ss2 << "output_file_threephase_" << x << "x2.txt";
     string filenamex2 = ss2.str();
+
+    stringstream ss3;
+    ss3 << "sstable_info_" << x << ".2.txt";
+    string filename2 = ss3.str(); // third load
+
+    stringstream ss4;
+    ss4 << "output_file_threephase_" << x << "x3.txt"; // 0.1資料過多無法使用triple
+    string filenamex3 = ss4.str();                     // triple load data
 
     //*******************************first***********************************************
     int i = 0;
@@ -398,9 +421,9 @@ int main(void)
         extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
         allocate_SStable(latency, WAF, top_overwrite, track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
         if (i != 0 && i % 80 == 0) // 每5GB輸出一次資訊
-            write_to_output(filenamex2, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+            write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
     }
-    write_to_output(filenamex2, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+    write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
     //**********************************first********************************************
 
     // initialization
@@ -415,8 +438,27 @@ int main(void)
         extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
         allocate_SStable(latency, WAF, top_overwrite, track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
         if (i != 0 && i % 80 == 0) // 每5GB輸出一次資訊
-            write_to_output(filenamex2, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+            write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
     }
-    write_to_output(filenamex2, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+    write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
     //********************************second******************************************
+
+    // initialization
+    initialization(level, key, latency, top_overwrite, WAF);
+
+    //********************************third******************************************
+    // 呼叫函式讀取檔案，並將結果存入 level 和 key 陣列中
+    readSSTableFile(filename2, level, key);
+
+    for (i = 0; i < 480; i += 4)
+    {
+        extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
+        allocate_SStable(latency, WAF, top_overwrite, track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
+        if (i != 0 && i % 80 == 0) // 每5GB輸出一次資訊
+            write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+    }
+    write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+    //********************************third******************************************
+
+    cout << more_sstable << endl;
 }
