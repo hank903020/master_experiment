@@ -271,6 +271,7 @@ void write_to_output(const string &filename, double &latency, double &WAF, int &
     outfile << "latency: " << latency << "ms" << endl;
     outfile << "top: " << top_flag << " " << "bottom: " << bottom_flag << endl;
     outfile << "top overwrite: " << top_overwrite << endl;
+
     if (i == 480)
     {
         double waf = 0;
@@ -293,6 +294,81 @@ void initialization(vector<int> &level, vector<int> &key, double &latency, int &
     WAF = 30720;
 }
 
+// *****************計算read latency******************
+// 計算read latency
+double calculateReadLatency(int track_src, int track_des)
+{
+    double t_seek = calculateSeekTime(track_src, track_des);
+    return t_seek;
+}
+void calculateReadLatency(const string &read_order_file, const vector<int> &top_sstable_level, const vector<int> &bottom_sstable_level, const vector<int> &top_sstable_key, const vector<int> &bottom_sstable_key, double &read_latency_total, int &current_sector) // 追蹤磁頭目前位置
+{
+    ifstream infile(read_order_file);
+    if (!infile.is_open())
+    {
+        cerr << "無法開啟讀取順序檔案：" << read_order_file << endl;
+        return;
+    }
+
+    string line;
+    while (getline(infile, line))
+    {
+        stringstream ss(line);
+        string temp;
+        int level = 0, key = 0;
+
+        if (getline(ss, temp, ','))
+            level = stoi(temp);
+        if (getline(ss, temp, ','))
+            key = stoi(temp);
+
+        // 在 top 搜尋
+        bool found = false;
+        int sstable_start = 0;
+        for (int i = 0; i < INDEX; ++i)
+        {
+            if (top_sstable_level[i] == level && top_sstable_key[i] == key)
+            {
+                sstable_start = i * 32; // Top 的起始位置
+                found = true;
+                break;
+            }
+        }
+
+        // 在 bottom 搜尋
+        if (!found)
+        {
+            for (int i = 0; i < INDEX; ++i)
+            {
+                if (bottom_sstable_level[i] == level && bottom_sstable_key[i] == key)
+                {
+                    sstable_start = i * 32;
+                    break;
+                }
+            }
+        }
+
+        // 計算latency
+        read_latency_total = read_latency_total + calculateReadLatency(current_sector, sstable_start);
+        // 更新目前磁頭位置
+        current_sector = sstable_start + 31;
+    }
+
+    infile.close();
+}
+void writeReadLatencyOutput(const string &output_file, double read_latency_total) // read latency outputs
+{
+    ofstream outfile(output_file);
+    if (!outfile.is_open())
+    {
+        cerr << "無法開啟輸出檔案：" << output_file << endl;
+        return;
+    }
+
+    outfile << "Total Read Track Movement: " << read_latency_total << " ms" << endl;
+    outfile.close();
+}
+
 int main(void)
 {
     vector<int> level(480);                   // 讀取存入vector
@@ -313,7 +389,7 @@ int main(void)
     int top_overwrite = 0;             // 紀錄top複寫次數
     double WAF = 30720;                // 計算寫入放大
 
-    float x = 0.2; // 修改此變數，產出不同%數data
+    float x = 0.3; // 修改此變數，產出不同%數data
     stringstream ss;
     ss << "sstable_info_" << x << ".txt";
     string filename = ss.str();
@@ -341,10 +417,10 @@ int main(void)
     {
         extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
         allocate_SStable(latency, WAF, top_overwrite, track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
-        if (i != 0 && i % 80 == 0) // 每5GB輸出一次資訊
-            write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+        //        if (i != 0 && i % 80 == 0) // 每5GB輸出一次資訊
+        //            write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
     }
-    write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+    //    write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
     //**********************************first********************************************
 
     // initialization
@@ -358,10 +434,10 @@ int main(void)
     {
         extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
         allocate_SStable(latency, WAF, top_overwrite, track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
-        if (i != 0 && i % 80 == 0) // 每5GB輸出一次資訊
-            write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+        //        if (i != 0 && i % 80 == 0) // 每5GB輸出一次資訊
+        //            write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
     }
-    write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+    //    write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
     //********************************second******************************************
 
     // initialization
@@ -375,11 +451,25 @@ int main(void)
     {
         extract_four_sstable(level, key, i, allocat_level, allocat_key); // 提取完4個要寫入sstable
         allocate_SStable(latency, WAF, top_overwrite, track_sector, top_flag, bottom_flag, allocat_level, allocat_key, top_tracks, bottom_tracks, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key);
-        if (i != 0 && i % 80 == 0) // 每5GB輸出一次資訊
-            write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+        //        if (i != 0 && i % 80 == 0) // 每5GB輸出一次資訊
+        //            write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
     }
-    write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
+    //    write_to_output(filenamex3, latency, WAF, top_overwrite, top_flag, bottom_flag, i);
     //********************************third******************************************
 
-    cout << more_sstable << endl;
+    //********************************Read latency caculate**************************
+    double read_latency_total = 0;
+    int current_sector = 0;
+
+    float y = 0;
+    y = x;
+    stringstream rr;
+    rr << "read_count_data_" << y << ".txt";
+    string read_order = rr.str();
+    stringstream rr2;
+    rr2 << "read_latency_two_" << y << ".txt";
+    string read_latency_info = rr2.str();
+
+    calculateReadLatency(read_order, top_sstable_level, bottom_sstable_level, top_sstable_key, bottom_sstable_key, read_latency_total, current_sector);
+    writeReadLatencyOutput(read_latency_info, read_latency_total);
 }
