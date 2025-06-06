@@ -1,1 +1,1 @@
-Total Read Track Movement: 548.655 ms
+Total Read Track Movement: 590.305 ms
